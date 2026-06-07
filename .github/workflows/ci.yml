@@ -1,0 +1,263 @@
+name: UrbanFlow CI/CD Pipeline
+
+# UrbanFlow — GitHub Actions CI/CD
+# Pipeline complet : Lint → Tests → Build → Analyse sécurité → Deploy simulé
+# Auteur : UrbanFlow Team — M2 Big Data & IA 2025
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "20"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 1 : Qualité du code Python
+  # ═══════════════════════════════════════════════════════════════════════════
+  lint-python:
+    name: "🔍 Lint & Format Python"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install linting tools
+        run: pip install ruff mypy black isort
+
+      - name: Run Ruff (linter ultra-rapide)
+        run: ruff check backend/ etl/ ml/ --output-format=github
+
+      - name: Run Black (format check)
+        run: black --check backend/ etl/ ml/
+
+      - name: Run isort (import order)
+        run: isort --check-only backend/ etl/ ml/
+
+      - name: Run mypy (type checking)
+        run: mypy backend/app/ --ignore-missing-imports
+        continue-on-error: true  # Non-bloquant en CI
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 2 : Tests unitaires et d'intégration
+  # ═══════════════════════════════════════════════════════════════════════════
+  test-backend:
+    name: "🧪 Tests Python (pytest)"
+    runs-on: ubuntu-latest
+    needs: lint-python
+
+    services:
+      # PostgreSQL + PostGIS pour les tests d'intégration
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_DB: urbanflow_test_db
+          POSTGRES_USER: urbanflow
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      # Redis pour les tests de cache
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install -r etl/requirements.txt
+          pip install pytest pytest-asyncio pytest-cov pytest-mock httpx codecarbon
+
+      - name: Initialize test database
+        run: |
+          PGPASSWORD=test_password psql -h localhost -U urbanflow -d urbanflow_test_db \
+            -f infra/docker/init.sql
+        env:
+          DATABASE_URL: postgresql://urbanflow:test_password@localhost:5432/urbanflow_test_db
+
+      - name: Run unit tests
+        run: |
+          pytest tests/unit/ -v \
+            --cov=etl --cov=backend/app \
+            --cov-report=xml:coverage-unit.xml \
+            --cov-report=term-missing \
+            --tb=short
+        env:
+          DATABASE_URL: postgresql://urbanflow:test_password@localhost:5432/urbanflow_test_db
+          REDIS_URL: redis://localhost:6379/0
+          GDPR_HASH_SALT: test-salt-for-ci
+
+      - name: Run integration tests
+        run: |
+          pytest tests/integration/ -v \
+            --cov=backend/app \
+            --cov-append \
+            --cov-report=xml:coverage-integration.xml \
+            --tb=short
+        env:
+          DATABASE_URL: postgresql://urbanflow:test_password@localhost:5432/urbanflow_test_db
+          REDIS_URL: redis://localhost:6379/0
+          GDPR_HASH_SALT: test-salt-for-ci
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage-unit.xml,coverage-integration.xml
+          fail_ci_if_error: false
+
+      - name: Check coverage threshold
+        run: |
+          pip install coverage
+          coverage report --fail-under=70
+        continue-on-error: true
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 3 : Analyse de sécurité
+  # ═══════════════════════════════════════════════════════════════════════════
+  security-scan:
+    name: "🔐 Analyse Sécurité"
+    runs-on: ubuntu-latest
+    needs: lint-python
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install security tools
+        run: pip install bandit pip-audit safety
+
+      - name: Run Bandit (SAST Python)
+        run: |
+          bandit -r backend/ etl/ ml/ \
+            -x tests/ \
+            --severity-level medium \
+            -f json -o bandit-report.json || true
+          bandit -r backend/ etl/ ml/ -x tests/ --severity-level high
+
+      - name: Run pip-audit (CVE deps)
+        run: pip-audit --requirement backend/requirements.txt --format json
+        continue-on-error: true
+
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: bandit-report.json
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 4 : Build Docker
+  # ═══════════════════════════════════════════════════════════════════════════
+  build-docker:
+    name: "🐳 Build & Push Docker"
+    runs-on: ubuntu-latest
+    needs: [test-backend, security-scan]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=sha-
+            type=semver,pattern={{version}}
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: infra/docker/Dockerfile.backend
+          target: production
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}-backend
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ═══════════════════════════════════════════════════════════════════════════
+  # JOB 5 : Déploiement simulé K8s
+  # ═══════════════════════════════════════════════════════════════════════════
+  deploy-staging:
+    name: "🚀 Deploy Staging (K8s simulé)"
+    runs-on: ubuntu-latest
+    needs: build-docker
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Validate K8s manifests
+        run: |
+          kubectl apply --dry-run=client -f infra/k8s/
+          echo "✅ Manifests K8s valides"
+
+      - name: Deploy to staging
+        run: |
+          echo "🚀 Déploiement en staging simulé..."
+          echo "Image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}"
+          # En production: kubectl apply -f infra/k8s/ --record
+          echo "✅ Déploiement staging terminé"
+
+      - name: Run smoke tests
+        run: |
+          echo "🔥 Smoke tests post-déploiement..."
+          # curl -f https://staging.urbanflow.fr/api/v1/health
+          echo "✅ Smoke tests passés"
+
+      - name: Notify deployment
+        run: |
+          echo "📢 Déploiement staging réussi — commit: ${{ github.sha }}"

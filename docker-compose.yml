@@ -1,0 +1,245 @@
+version: "3.9"
+
+# UrbanFlow — Docker Compose (Développement)
+# Architecture complète : Backend + ETL + BDD + Cache + Monitoring
+# Auteur : UrbanFlow Team — M2 Big Data & IA 2025
+
+services:
+
+# base de données postgresql + postgis
+  postgres:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: urbanflow_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: urbanflow_db
+      POSTGRES_USER: urbanflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urbanflow_dev_pwd}
+      # Performance tuning pour les séries temporelles
+      POSTGRES_SHARED_PRELOAD_LIBRARIES: pg_stat_statements
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/docker/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U urbanflow -d urbanflow_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - urbanflow_net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+# postgresql replica (pca — streaming replication)
+  postgres_replica:
+    image: postgis/postgis:16-3.4-alpine
+    container_name: urbanflow_postgres_replica
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: urbanflow_db
+      POSTGRES_USER: urbanflow
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-urbanflow_dev_pwd}
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - urbanflow_net
+    profiles:
+      - ha  # Activé uniquement avec --profile ha
+
+# redis (cache + pub/sub)
+  redis:
+    image: redis:7.2-alpine
+    container_name: urbanflow_redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save 60 1000
+      --requirepass ${REDIS_PASSWORD:-urbanflow_redis_dev}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-urbanflow_redis_dev}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - urbanflow_net
+
+# backend fastapi
+  backend:
+    image: urbanflow_backend_img
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.backend
+      target: development
+    container_name: urbanflow_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://urbanflow:${POSTGRES_PASSWORD:-urbanflow_dev_pwd}@postgres:5432/urbanflow_db
+      REDIS_URL: redis://:${REDIS_PASSWORD:-urbanflow_redis_dev}@redis:6379/0
+      OWM_API_KEY: ${OWM_API_KEY:-}
+      GDPR_HASH_SALT: ${GDPR_HASH_SALT:-urbanflow-salt-change-in-prod}
+      ENVIRONMENT: development
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - urbanflow_net
+
+# worker etl
+  etl_worker:
+    image: urbanflow_etl_img
+    build:
+      context: .
+      dockerfile: infra/docker/Dockerfile.etl
+    container_name: urbanflow_etl
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://urbanflow:${POSTGRES_PASSWORD:-urbanflow_dev_pwd}@postgres:5432/urbanflow_db
+      REDIS_URL: redis://:${REDIS_PASSWORD:-urbanflow_redis_dev}@redis:6379/0
+      OWM_API_KEY: ${OWM_API_KEY:-}
+      IDF_API_KEY: ${IDF_API_KEY:-}
+      GDPR_HASH_SALT: ${GDPR_HASH_SALT:-urbanflow-salt-change-in-prod}
+      CODECARBON_OUTPUT_DIR: /app/logs/carbon
+    command: ["python", "-m", "etl.pipeline.ingestor"]
+    volumes:
+      - ./etl:/app/etl
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - urbanflow_net
+
+# frontend react (vite dev server)
+  frontend:
+    image: node:20-alpine
+    container_name: urbanflow_frontend
+    working_dir: /app
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
+    depends_on:
+      - backend
+    networks:
+      - urbanflow_net
+
+# prometheus (monitoring)
+  prometheus:
+    image: prom/prometheus:v2.49.0
+    container_name: urbanflow_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./infra/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - urbanflow_net
+
+# grafana (dashboard monitoring)
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: urbanflow_grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-urbanflow_grafana_dev}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/monitoring/grafana-dashboard.json:/etc/grafana/provisioning/dashboards/urbanflow.json:ro
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - urbanflow_net
+
+# minio (s3 simulé — backups pra)
+  minio:
+    image: minio/minio:latest
+    container_name: urbanflow_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER:-urbanflow}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD:-urbanflow_minio_dev}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - urbanflow_net
+
+
+# volumes persistants
+volumes:
+  postgres_data:
+    driver: local
+  postgres_replica_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  minio_data:
+    driver: local
+
+
+# réseau dédié
+networks:
+  urbanflow_net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

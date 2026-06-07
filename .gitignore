@@ -1,0 +1,75 @@
+# UrbanFlow — .gitignore
+# Auteur : UrbanFlow Team — M2 Big Data & IA 2025
+
+# ─── Python ─────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# ─── Environnements virtuels ─────────────────────────────────────────────────
+venv/
+.venv/
+env/
+ENV/
+.env.local
+
+# ─── IMPORTANT : Variables d'environnement (ne jamais committer !) ──────────
+.env
+# MAIS garder .env.example
+!.env.example
+
+# ─── Données et modèles ─────────────────────────────────────────────────────
+logs/
+*.log
+logs/carbon/
+ml/models/saved/
+ml/data/raw/
+ml/data/processed/
+*.h5
+*.keras
+*.pkl
+*.joblib
+
+# ─── Node.js / Frontend ──────────────────────────────────────────────────────
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+dist/
+
+# ─── Docker ──────────────────────────────────────────────────────────────────
+# (ne pas ignorer docker-compose.yml — il est versionné)
+
+# ─── Documents académiques (ne pas push sur GitHub) ─────────────────────────
+*.pdf
+*.ods
+*.doc
+*.docx
+grille_content.txt
+Cadre_Pedagogique*.pdf
+Cahier_des_charges*.pdf
+
+# ─── IDE ─────────────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ─── Backups MinIO ───────────────────────────────────────────────────────────
+backups/
+minio_data/

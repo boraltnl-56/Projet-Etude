@@ -1,0 +1,80 @@
+# UrbanFlow — Dockerfile Backend FastAPI
+# Multi-stage build pour minimiser la taille de l'image
+# Auteur : UrbanFlow Team — M2 Big Data & IA 2025
+
+# ─── Stage 1 : Dépendances ─────────────────────────────────────────────────
+FROM python:3.12-slim AS deps
+
+WORKDIR /build
+
+# Dépendances système pour asyncpg et PostGIS
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    gcc \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt \
+    && pip install --no-cache-dir gunicorn uvicorn[standard]
+
+
+# ─── Stage 2 : Développement ───────────────────────────────────────────────
+FROM python:3.12-slim AS development
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copie des dépendances installées
+COPY --from=deps /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
+
+COPY backend/ .
+
+EXPOSE 8000
+
+# Rechargement automatique en développement (--reload)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+
+# ─── Stage 3 : Production ──────────────────────────────────────────────────
+FROM python:3.12-slim AS production
+
+WORKDIR /app
+
+# Utilisateur non-root (sécurité)
+RUN groupadd -r urbanflow && useradd -r -g urbanflow urbanflow
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=deps /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
+COPY --from=deps /usr/local/bin /usr/local/bin
+
+COPY backend/ .
+
+RUN chown -R urbanflow:urbanflow /app
+USER urbanflow
+
+EXPOSE 8000
+
+# Gunicorn + Uvicorn workers (production)
+# workers = (2 × CPU_count) + 1 — modifiable via K8s env vars
+CMD ["gunicorn", "app.main:app", \
+     "--worker-class", "uvicorn.workers.UvicornWorker", \
+     "--workers", "4", \
+     "--bind", "0.0.0.0:8000", \
+     "--timeout", "60", \
+     "--keepalive", "5", \
+     "--log-level", "info", \
+     "--access-logfile", "-"]
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/api/v1/health || exit 1

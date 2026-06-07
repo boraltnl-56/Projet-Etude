@@ -1,0 +1,20 @@
+# UrbanFlow — Dockerfile ETL Worker
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev gcc curl \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY etl/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+COPY etl/ ./etl/
+
+RUN groupadd -r etlworker && useradd -r -g etlworker etlworker \
+    && chown -R etlworker:etlworker /app
+USER etlworker
+
+CMD ["python", "-m", "etl.flows.traffic_flow"]

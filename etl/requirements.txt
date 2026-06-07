@@ -1,0 +1,27 @@
+# UrbanFlow ETL — Dépendances Python
+# Auteur : UrbanFlow Team — M2 Big Data & IA 2025
+
+# ─── HTTP & Ingestion ───────────────────────────────────────────────────────
+httpx==0.27.2              # Client HTTP async (ingestion sources open data)
+tenacity==9.0.0            # Retry exponentiel pour les appels API défaillants
+aiofiles==24.1.0           # I/O fichiers async (GTFS statiques)
+
+# ─── Orchestration ──────────────────────────────────────────────────────────
+prefect==2.20.0            # Orchestration des flows ETL (scheduling, retry, UI)
+
+# ─── BDD & Cache ────────────────────────────────────────────────────────────
+asyncpg==0.29.0
+redis[asyncio]==5.1.1
+
+# ─── Data Processing ────────────────────────────────────────────────────────
+pandas==2.2.3              # Manipulation des DataFrames (CSV, GTFS)
+numpy==1.26.4              # Calculs numériques
+
+# ─── Green IT — Mesure empreinte carbone ────────────────────────────────────
+codecarbon==2.7.0          # Mesure CO₂ des entraînements IA et pipelines
+
+# ─── Validation & Sécurité ──────────────────────────────────────────────────
+pydantic==2.9.0
+
+# ─── Logging ────────────────────────────────────────────────────────────────
+structlog==24.4.0

@@ -1,0 +1,29 @@
+# UrbanFlow Backend — Dépendances Python
+# Auteur : UrbanFlow Team — M2 Big Data & IA 2025
+
+# ─── API Framework ──────────────────────────────────────────────────────────
+fastapi==0.115.0           # Framework async haute performance
+uvicorn[standard]==0.30.6  # Serveur ASGI (avec websockets, HTTP/2)
+gunicorn==22.0.0           # Process manager production
+pydantic==2.9.0            # Validation données (v2 — 10x plus rapide)
+pydantic-settings==2.5.2   # Configuration via env vars
+
+# ─── Base de données ────────────────────────────────────────────────────────
+asyncpg==0.29.0            # Driver PostgreSQL async ultra-performant
+sqlalchemy[asyncio]==2.0.35 # ORM async avec support PostgreSQL
+alembic==1.13.3            # Migrations de schéma BDD
+
+# ─── Cache Redis ────────────────────────────────────────────────────────────
+redis[asyncio]==5.1.1      # Client Redis async (v5 — asyncio natif)
+
+# ─── Sécurité & Auth ────────────────────────────────────────────────────────
+python-jose[cryptography]==3.3.0  # JWT tokens
+passlib[bcrypt]==1.7.4             # Hashing mots de passe
+python-multipart==0.0.12           # Form data (upload fichiers)
+
+# ─── Monitoring ─────────────────────────────────────────────────────────────
+prometheus-client==0.21.0  # Métriques Prometheus
+structlog==24.4.0           # Logging structuré (JSON)
+
+# ─── HTTP Client ────────────────────────────────────────────────────────────
+httpx==0.27.2              # Client HTTP async (tests + appels internes)
