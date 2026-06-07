@@ -15,7 +15,6 @@ Auteur : UrbanFlow Team — M2 Big Data & IA 2025
 
 import logging
 import os
-from contextlib import asynccontextmanager
 from datetime import datetime
 
 import asyncpg
@@ -49,7 +48,10 @@ class PostgresLoader:
             max_size=int(os.environ.get("DB_POOL_MAX", "10")),
             command_timeout=30,
         )
-        logger.info("✅ Pool PostgreSQL initialisé (min=2, max=%s)", os.environ.get("DB_POOL_MAX", "10"))
+        logger.info(
+            "✅ Pool PostgreSQL initialisé (min=2, max=%s)",
+            os.environ.get("DB_POOL_MAX", "10"),
+        )
 
     async def disconnect(self) -> None:
         """Ferme proprement le pool de connexions."""
@@ -99,12 +101,16 @@ class PostgresLoader:
                 r["source"],
                 r["sensor_id"],
                 r["road_name"],
-                r.get("longitude"),    # lon → X (PostGIS: lon avant lat)
-                r.get("latitude"),     # lat → Y
+                r.get("longitude"),  # lon → X (PostGIS: lon avant lat)
+                r.get("latitude"),  # lat → Y
                 r["vehicle_count"],
                 r["average_speed_kmh"],
                 r["congestion_level"],
-                datetime.fromisoformat(r["timestamp"].replace('Z', '+00:00')) if isinstance(r["timestamp"], str) else r["timestamp"],
+                (
+                    datetime.fromisoformat(r["timestamp"].replace("Z", "+00:00"))
+                    if isinstance(r["timestamp"], str)
+                    else r["timestamp"]
+                ),
             )
             for r in records
             if r.get("latitude") is not None and r.get("longitude") is not None
@@ -149,11 +155,21 @@ class PostgresLoader:
                 r["source"],
                 r["longitude"],
                 r["latitude"],
-                r["aqi"], r["pm25"], r["pm10"], r["no2"], r["o3"],
-                r["temperature_celsius"], r["humidity_pct"],
-                r["wind_speed_ms"], r["weather_condition"],
-                r["precipitation_mm"], 
-                datetime.fromisoformat(r["timestamp"].replace('Z', '+00:00')) if isinstance(r["timestamp"], str) else r["timestamp"],
+                r["aqi"],
+                r["pm25"],
+                r["pm10"],
+                r["no2"],
+                r["o3"],
+                r["temperature_celsius"],
+                r["humidity_pct"],
+                r["wind_speed_ms"],
+                r["weather_condition"],
+                r["precipitation_mm"],
+                (
+                    datetime.fromisoformat(r["timestamp"].replace("Z", "+00:00"))
+                    if isinstance(r["timestamp"], str)
+                    else r["timestamp"]
+                ),
             )
             for r in records
         ]

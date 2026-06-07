@@ -17,11 +17,9 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 import asyncpg
-from fastapi import APIRouter, Depends, Query, status
-from pydantic import BaseModel, Field
-
-from app.db.session import get_pg_conn, get_redis
-import redis.asyncio as redis
+from app.db.session import get_pg_conn
+from fastapi import APIRouter, Depends, Query
+from pydantic import BaseModel
 
 logger = logging.getLogger("urbanflow.api.traffic")
 router = APIRouter()
@@ -39,10 +37,12 @@ class TrafficMeasurement(BaseModel):
     timestamp: datetime
     source: str
 
+
 class PredictionRequest(BaseModel):
     sensor_id: str
     horizon_minutes: int = 60
     include_confidence: bool = True
+
 
 class PredictionResponse(BaseModel):
     sensor_id: str
@@ -55,6 +55,7 @@ class PredictionResponse(BaseModel):
     computed_at: datetime
     cached: bool = False
 
+
 class HeatmapPoint(BaseModel):
     lat: float
     lon: float
@@ -65,10 +66,11 @@ class HeatmapPoint(BaseModel):
 
 # endpoints
 
+
 @router.get("/current", response_model=list[TrafficMeasurement])
 async def get_current_traffic(
     limit: Annotated[int, Query(ge=1, le=1000)] = 500,
-    db: asyncpg.Connection = Depends(get_pg_conn)
+    db: asyncpg.Connection = Depends(get_pg_conn),
 ) -> list[TrafficMeasurement]:
     """Trafic en temps réel depuis PostgreSQL."""
     query = """
@@ -89,13 +91,18 @@ async def get_current_traffic(
 async def predict_traffic(request: PredictionRequest) -> PredictionResponse:
     """Prédiction hybride ARIMA+LSTM."""
     import random
-    # Le modèle ML lourd n'est pas instancié ici pour la perf web, 
+
+    # Le modèle ML lourd n'est pas instancié ici pour la perf web,
     # en prod il appelle un microservice ou utilise ONNX.
     hour_ahead = datetime.now(timezone.utc).hour + (request.horizon_minutes // 60)
     is_predicted_rush = (7 <= hour_ahead % 24 <= 9) or (17 <= hour_ahead % 24 <= 19)
 
-    predicted_speed = random.uniform(15, 40) if is_predicted_rush else random.uniform(65, 110)
-    predicted_congestion = 3 if predicted_speed <= 30 else (2 if predicted_speed <= 50 else 1)
+    predicted_speed = (
+        random.uniform(15, 40) if is_predicted_rush else random.uniform(65, 110)
+    )
+    predicted_congestion = (
+        3 if predicted_speed <= 30 else (2 if predicted_speed <= 50 else 1)
+    )
 
     return PredictionResponse(
         sensor_id=request.sensor_id,
@@ -112,7 +119,7 @@ async def predict_traffic(request: PredictionRequest) -> PredictionResponse:
 
 @router.get("/heatmap", response_model=list[HeatmapPoint])
 async def get_heatmap_data(
-    db: asyncpg.Connection = Depends(get_pg_conn)
+    db: asyncpg.Connection = Depends(get_pg_conn),
 ) -> list[HeatmapPoint]:
     """Données pour Mapbox/Leaflet depuis Postgres."""
     query = """
@@ -141,7 +148,7 @@ async def get_heatmap_data(
 @router.get("/alerts")
 async def get_traffic_alerts(
     min_level: Annotated[int, Query(ge=0, le=4)] = 2,
-    db: asyncpg.Connection = Depends(get_pg_conn)
+    db: asyncpg.Connection = Depends(get_pg_conn),
 ) -> dict:
     """Alertes de congestion depuis Postgres."""
     query = """

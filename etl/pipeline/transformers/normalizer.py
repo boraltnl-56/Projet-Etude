@@ -40,20 +40,32 @@ class DataNormalizer:
         normalized = []
         for record in raw_records:
             try:
-                normalized.append({
-                    "source": str(record.get("source", "unknown")),
-                    "sensor_id": str(record.get("sensor_id", "unknown")),
-                    "road_name": str(record.get("road_name", "unknown")),
-                    "latitude": float(record["latitude"]) if record.get("latitude") is not None else None,
-                    "longitude": float(record["longitude"]) if record.get("longitude") is not None else None,
-                    "vehicle_count": int(record.get("vehicle_count", 0)),
-                    "average_speed_kmh": float(record.get("average_speed_kmh", 0)),
-                    "congestion_level": int(record.get("congestion_level", 0)),
-                    "timestamp": self._parse_timestamp(record.get("timestamp")),
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                })
+                normalized.append(
+                    {
+                        "source": str(record.get("source", "unknown")),
+                        "sensor_id": str(record.get("sensor_id", "unknown")),
+                        "road_name": str(record.get("road_name", "unknown")),
+                        "latitude": (
+                            float(record["latitude"])
+                            if record.get("latitude") is not None
+                            else None
+                        ),
+                        "longitude": (
+                            float(record["longitude"])
+                            if record.get("longitude") is not None
+                            else None
+                        ),
+                        "vehicle_count": int(record.get("vehicle_count", 0)),
+                        "average_speed_kmh": float(record.get("average_speed_kmh", 0)),
+                        "congestion_level": int(record.get("congestion_level", 0)),
+                        "timestamp": self._parse_timestamp(record.get("timestamp")),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
             except (ValueError, TypeError) as e:
-                logger.warning("⚠️  Enregistrement trafic invalide ignoré: %s — %s", record, e)
+                logger.warning(
+                    "⚠️  Enregistrement trafic invalide ignoré: %s — %s", record, e
+                )
         return normalized
 
     def normalize_environment(self, raw_records: list[dict]) -> list[dict]:
@@ -69,24 +81,32 @@ class DataNormalizer:
         normalized = []
         for record in raw_records:
             try:
-                normalized.append({
-                    "source": str(record.get("source", "unknown")),
-                    "latitude": float(record.get("latitude", 48.8566)),
-                    "longitude": float(record.get("longitude", 2.3522)),
-                    "aqi": int(record.get("aqi", 0)),
-                    "pm25": float(record.get("pm25", 0)),
-                    "pm10": float(record.get("pm10", 0)),
-                    "no2": float(record.get("no2", 0)),
-                    "o3": float(record.get("o3", 0)),
-                    "temperature_celsius": float(record.get("temperature_celsius", 15)),
-                    "humidity_pct": int(record.get("humidity_pct", 60)),
-                    "wind_speed_ms": float(record.get("wind_speed_ms", 0)),
-                    "weather_condition": str(record.get("weather_condition", "Unknown")),
-                    "precipitation_mm": float(record.get("precipitation_mm", 0)),
-                    "timestamp": self._parse_timestamp(record.get("timestamp")),
-                })
+                normalized.append(
+                    {
+                        "source": str(record.get("source", "unknown")),
+                        "latitude": float(record.get("latitude", 48.8566)),
+                        "longitude": float(record.get("longitude", 2.3522)),
+                        "aqi": int(record.get("aqi", 0)),
+                        "pm25": float(record.get("pm25", 0)),
+                        "pm10": float(record.get("pm10", 0)),
+                        "no2": float(record.get("no2", 0)),
+                        "o3": float(record.get("o3", 0)),
+                        "temperature_celsius": float(
+                            record.get("temperature_celsius", 15)
+                        ),
+                        "humidity_pct": int(record.get("humidity_pct", 60)),
+                        "wind_speed_ms": float(record.get("wind_speed_ms", 0)),
+                        "weather_condition": str(
+                            record.get("weather_condition", "Unknown")
+                        ),
+                        "precipitation_mm": float(record.get("precipitation_mm", 0)),
+                        "timestamp": self._parse_timestamp(record.get("timestamp")),
+                    }
+                )
             except (ValueError, TypeError) as e:
-                logger.warning("⚠️  Enregistrement environnemental invalide: %s — %s", record, e)
+                logger.warning(
+                    "⚠️  Enregistrement environnemental invalide: %s — %s", record, e
+                )
         return normalized
 
     def normalize_transit(self, raw_records: list[dict]) -> list[dict]:
@@ -102,17 +122,21 @@ class DataNormalizer:
         normalized = []
         for record in raw_records:
             try:
-                normalized.append({
-                    "source": str(record.get("source", "unknown")),
-                    "event_type": str(record.get("type", "unknown")),
-                    "line": str(record.get("line", "unknown")),
-                    "delay_minutes": int(record.get("delay_minutes", 0)),
-                    "severity": int(record.get("severity", 1)),
-                    "message": str(record.get("message", ""))[:500],
-                    "timestamp": self._parse_timestamp(record.get("timestamp")),
-                })
+                normalized.append(
+                    {
+                        "source": str(record.get("source", "unknown")),
+                        "event_type": str(record.get("type", "unknown")),
+                        "line": str(record.get("line", "unknown")),
+                        "delay_minutes": int(record.get("delay_minutes", 0)),
+                        "severity": int(record.get("severity", 1)),
+                        "message": str(record.get("message", ""))[:500],
+                        "timestamp": self._parse_timestamp(record.get("timestamp")),
+                    }
+                )
             except (ValueError, TypeError) as e:
-                logger.warning("⚠️  Enregistrement transit invalide: %s — %s", record, e)
+                logger.warning(
+                    "⚠️  Enregistrement transit invalide: %s — %s", record, e
+                )
         return normalized
 
     @staticmethod

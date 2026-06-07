@@ -11,17 +11,17 @@ Auteur : UrbanFlow Team — M2 Big Data & IA 2025
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Annotated
 
 import asyncpg
+from app.db.session import get_pg_conn
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 
-from app.db.session import get_pg_conn
-
 logger = logging.getLogger("urbanflow.api.environment")
 router = APIRouter()
+
 
 class EnvironmentReading(BaseModel):
     source: str
@@ -39,19 +39,22 @@ class EnvironmentReading(BaseModel):
     weather_condition: str
     precipitation_mm: float
 
+
 class AQIHistoryDay(BaseModel):
     date: str
     aqi_mean: float
     pm25_mean: float
     no2_mean: float
 
+
 class AQIHistoryResponse(BaseModel):
     history: list[AQIHistoryDay]
     period_days: int
 
+
 @router.get("/current", response_model=list[EnvironmentReading])
 async def get_current_environment(
-    db: asyncpg.Connection = Depends(get_pg_conn)
+    db: asyncpg.Connection = Depends(get_pg_conn),
 ) -> list[EnvironmentReading]:
     """Derniers relevés environnementaux depuis PostgreSQL."""
     query = """
@@ -66,10 +69,11 @@ async def get_current_environment(
     records = await db.fetch(query)
     return [EnvironmentReading(**dict(r)) for r in records]
 
+
 @router.get("/aqi-history", response_model=AQIHistoryResponse)
 async def get_aqi_history(
     days: Annotated[int, Query(ge=1, le=30)] = 7,
-    db: asyncpg.Connection = Depends(get_pg_conn)
+    db: asyncpg.Connection = Depends(get_pg_conn),
 ) -> AQIHistoryResponse:
     """Historique agrégé (moyennes journalières) de la qualité de l'air."""
     query = """
@@ -85,11 +89,11 @@ async def get_aqi_history(
     """
     interval_str = f"{days} days"
     records = await db.fetch(query, interval_str)
-    
+
     # Si pas encore assez de données dans la DB, on complète avec des valeurs lissées
     # pour que le front ne soit pas vide le premier jour.
     if not records:
         return AQIHistoryResponse(history=[], period_days=days)
-        
+
     history = [AQIHistoryDay(**dict(r)) for r in records]
     return AQIHistoryResponse(history=history, period_days=days)

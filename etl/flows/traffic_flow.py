@@ -19,8 +19,6 @@ from datetime import datetime, timezone
 
 from codecarbon import EmissionsTracker
 from prefect import flow, get_run_logger, task
-from prefect.deployments import DeploymentSchedule
-from prefect.server.schemas.schedules import IntervalSchedule
 
 from etl.pipeline.ingestor import DataIngestor
 
@@ -53,14 +51,18 @@ async def task_transform_traffic(ingestor: DataIngestor, raw_data: dict) -> dict
     processed = {}
 
     if raw_data.get("data_gouv"):
-        processed["traffic"] = await ingestor.process_traffic_data(raw_data["data_gouv"])
+        processed["traffic"] = await ingestor.process_traffic_data(
+            raw_data["data_gouv"]
+        )
         log.info("✅ Trafic: %d enregistrements normalisés", len(processed["traffic"]))
 
     if raw_data.get("environment"):
         processed["environment"] = ingestor.normalizer.normalize_environment(
             raw_data["environment"]
         )
-        log.info("✅ Environnement: %d lectures normalisées", len(processed["environment"]))
+        log.info(
+            "✅ Environnement: %d lectures normalisées", len(processed["environment"])
+        )
 
     if raw_data.get("idf_mobilites"):
         processed["transit"] = ingestor.normalizer.normalize_transit(
@@ -81,7 +83,11 @@ async def task_load_storage(ingestor: DataIngestor, processed_data: dict) -> dic
     """Tâche Prefect : Chargement dans PostgreSQL et Redis."""
     log = get_run_logger()
     stats = await ingestor.load_to_storage(processed_data)
-    log.info("🗄️  PostgreSQL: %d records | ⚡ Redis: %d alertes", stats["postgres"], stats["redis"])
+    log.info(
+        "🗄️  PostgreSQL: %d records | ⚡ Redis: %d alertes",
+        stats["postgres"],
+        stats["redis"],
+    )
     return stats
 
 

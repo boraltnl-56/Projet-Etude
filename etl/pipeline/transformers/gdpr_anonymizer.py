@@ -27,7 +27,7 @@ _SALT = os.environ.get("GDPR_HASH_SALT", "urbanflow-default-salt-CHANGE-IN-PROD"
 
 # Paramètres d'anonymisation géospatiale
 _GEO_NOISE_DEGREES = 0.0015  # ≈ 150 mètres de floutage
-_EPHEMERAL_ID_TTL_DAYS = 30   # Durée de vie des IDs éphémères (Art. 17 RGPD)
+_EPHEMERAL_ID_TTL_DAYS = 30  # Durée de vie des IDs éphémères (Art. 17 RGPD)
 
 
 class GDPRAnonymizer:
@@ -51,7 +51,9 @@ class GDPRAnonymizer:
         ✅ Recital 26 — Données anonymisées hors scope RGPD
     """
 
-    async def anonymize(self, data: dict[str, Any], client_ip: str = "") -> dict[str, Any]:
+    async def anonymize(
+        self, data: dict[str, Any], client_ip: str = ""
+    ) -> dict[str, Any]:
         """
         Anonymise un signalement citoyen de manière irréversible.
 
@@ -70,37 +72,50 @@ class GDPRAnonymizer:
         """
         anonymized: dict[str, Any] = {}
 
-# 1. anonymisation de l'adresse ip
+        # 1. anonymisation de l'adresse ip
         ip_to_hash = client_ip or data.get("ip_address", "")
         anonymized["ip_hash"] = self.hash_ip(ip_to_hash) if ip_to_hash else None
 
-# 2. anonymisation des coordonnées gps
+        # 2. anonymisation des coordonnées gps
         lat = data.get("latitude")
         lon = data.get("longitude")
         if lat is not None and lon is not None:
             blurred_lat, blurred_lon = self.blur_coordinates(float(lat), float(lon))
-            anonymized["latitude_approx"] = round(blurred_lat, 4)   # ~10m précision max
+            anonymized["latitude_approx"] = round(blurred_lat, 4)  # ~10m précision max
             anonymized["longitude_approx"] = round(blurred_lon, 4)
         else:
             anonymized["latitude_approx"] = None
             anonymized["longitude_approx"] = None
 
-# 3. identifiant éphémère (remplace tout id utilisateur)
+        # 3. identifiant éphémère (remplace tout id utilisateur)
         anonymized["ephemeral_id"] = self.generate_ephemeral_id()
         anonymized["ephemeral_id_expires_at"] = (
             datetime.now(timezone.utc) + timedelta(days=_EPHEMERAL_ID_TTL_DAYS)
         ).isoformat()
 
-# 4. conservation des données non-personnelles utiles
-        anonymized["report_type"] = data.get("report_type", "unknown")   # embouteillage, accident...
+        # 4. conservation des données non-personnelles utiles
+        anonymized["report_type"] = data.get(
+            "report_type", "unknown"
+        )  # embouteillage, accident...
         anonymized["severity"] = data.get("severity", 1)
-        anonymized["timestamp"] = data.get("timestamp", datetime.now(timezone.utc).isoformat())
+        anonymized["timestamp"] = data.get(
+            "timestamp", datetime.now(timezone.utc).isoformat()
+        )
         anonymized["description"] = self._sanitize_text(data.get("description", ""))
 
-# 5. suppression explicite des pii
+        # 5. suppression explicite des pii
         # Les champs suivants sont JAMAIS persistés
-        pii_fields = ["ip_address", "user_id", "email", "name", "phone",
-                      "device_id", "session_id", "latitude", "longitude"]
+        pii_fields = [
+            "ip_address",
+            "user_id",
+            "email",
+            "name",
+            "phone",
+            "device_id",
+            "session_id",
+            "latitude",
+            "longitude",
+        ]
         for field in pii_fields:
             data.pop(field, None)
 
@@ -193,6 +208,8 @@ class GDPRAnonymizer:
         # Suppression des numéros de téléphone
         text = re.sub(r"(\+33|0)(6|7)\s?(\d{2}\s?){4}", "[PHONE_REDACTED]", text)
         # Suppression des emails
-        text = re.sub(r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "[EMAIL_REDACTED]", text)
+        text = re.sub(
+            r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}", "[EMAIL_REDACTED]", text
+        )
         # Limitation de la longueur
         return text[:500]

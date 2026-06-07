@@ -27,9 +27,10 @@ REDIS_URL = os.environ.get(
     "redis://:urbanflow_redis_dev@localhost:6379/0",
 )
 
+
 class Database:
     """Singleton pour gérer les connexions aux bases de données."""
-    
+
     def __init__(self):
         self._pg_pool: asyncpg.Pool | None = None
         self._redis_client: redis.Redis | None = None
@@ -100,7 +101,7 @@ class Database:
         if self._pg_pool:
             await self._pg_pool.close()
             logger.info("🛑 Pool PostgreSQL fermé")
-            
+
         if self._redis_client:
             await self._redis_client.aclose()
             logger.info("🛑 Connexion Redis fermée")
@@ -121,6 +122,7 @@ class Database:
 # Instance globale
 db = Database()
 
+
 # Dépendances FastAPI
 async def get_pg_conn() -> AsyncGenerator[asyncpg.Connection, None]:
     """Fournit une connexion PostgreSQL depuis le pool."""
@@ -131,8 +133,9 @@ async def get_pg_conn() -> AsyncGenerator[asyncpg.Connection, None]:
         logger.error(f"Erreur d'acquisition de connexion PostgreSQL: {e}")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database service unavailable"
+            detail="Database service unavailable",
         )
+
 
 async def get_redis() -> AsyncGenerator[redis.Redis, None]:
     """Fournit le client Redis."""

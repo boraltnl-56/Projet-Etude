@@ -71,10 +71,16 @@ class IDFMobilitesSource:
             logger.info("✅ IDF Mobilités: %d perturbations récupérées", len(results))
 
         except httpx.HTTPStatusError as e:
-            logger.error("❌ IDF Mobilités HTTP %d: %s", e.response.status_code, e.response.text[:200])
+            logger.error(
+                "❌ IDF Mobilités HTTP %d: %s",
+                e.response.status_code,
+                e.response.text[:200],
+            )
             # Fallback : données simulées réalistes pour démonstration
             results = self._generate_simulated_disruptions()
-            logger.warning("⚠️  Utilisation de %d perturbations simulées (fallback)", len(results))
+            logger.warning(
+                "⚠️  Utilisation de %d perturbations simulées (fallback)", len(results)
+            )
 
         return results
 
@@ -99,14 +105,18 @@ class IDFMobilitesSource:
             )
             for situation in situations:
                 content = situation.get("Content", {})
-                disruptions.append({
-                    "source": "idf_mobilites",
-                    "type": "disruption",
-                    "line": content.get("LineRef", {}).get("value", "unknown"),
-                    "message": content.get("Message", [{}])[0].get("MessageText", {}).get("value", ""),
-                    "severity": situation.get("InfoMessageVersion", 1),
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                })
+                disruptions.append(
+                    {
+                        "source": "idf_mobilites",
+                        "type": "disruption",
+                        "line": content.get("LineRef", {}).get("value", "unknown"),
+                        "message": content.get("Message", [{}])[0]
+                        .get("MessageText", {})
+                        .get("value", ""),
+                        "severity": situation.get("InfoMessageVersion", 1),
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
         except (KeyError, IndexError, TypeError) as e:
             logger.warning("⚠️  Erreur de parsing SIRI-SX: %s", e)
         return disruptions
@@ -118,17 +128,22 @@ class IDFMobilitesSource:
         Utilisé comme fallback si l'API est indisponible.
         """
         import random
+
         lines = ["RER A", "RER B", "M1", "M4", "M13", "Transilien J", "Bus 75"]
         types = ["delay", "cancellation", "detour", "crowding"]
         disruptions = []
         for _ in range(random.randint(5, 15)):
-            disruptions.append({
-                "source": "idf_mobilites_simulated",
-                "type": random.choice(types),
-                "line": random.choice(lines),
-                "delay_minutes": random.randint(2, 45) if random.random() > 0.3 else 0,
-                "message": "Perturbation simulée pour démonstration",
-                "severity": random.randint(1, 3),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
+            disruptions.append(
+                {
+                    "source": "idf_mobilites_simulated",
+                    "type": random.choice(types),
+                    "line": random.choice(lines),
+                    "delay_minutes": (
+                        random.randint(2, 45) if random.random() > 0.3 else 0
+                    ),
+                    "message": "Perturbation simulée pour démonstration",
+                    "severity": random.randint(1, 3),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            )
         return disruptions

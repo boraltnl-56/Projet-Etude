@@ -96,11 +96,13 @@ class RedisLoader:
         # Enrichissement des alertes avec les métadonnées
         enriched_alerts = []
         for alert in alerts:
-            enriched_alerts.append({
-                **alert,
-                "cached_at": datetime.now(timezone.utc).isoformat(),
-                "ttl_seconds": ttl,
-            })
+            enriched_alerts.append(
+                {
+                    **alert,
+                    "cached_at": datetime.now(timezone.utc).isoformat(),
+                    "ttl_seconds": ttl,
+                }
+            )
 
         # SET principal avec TTL
         await self._redis.set(
@@ -110,7 +112,9 @@ class RedisLoader:
         )
 
         # Publication Pub/Sub pour les alertes critiques (niveau 4 = paralysé)
-        critical_alerts = [a for a in enriched_alerts if a.get("congestion_level", 0) >= 4]
+        critical_alerts = [
+            a for a in enriched_alerts if a.get("congestion_level", 0) >= 4
+        ]
         for critical in critical_alerts:
             await self._redis.publish(
                 "urbanflow:alerts:critical",
@@ -122,7 +126,9 @@ class RedisLoader:
                 critical.get("congestion_level", 0),
             )
 
-        logger.debug("⚡ %d alertes trafic en cache (TTL=%ds)", len(enriched_alerts), ttl)
+        logger.debug(
+            "⚡ %d alertes trafic en cache (TTL=%ds)", len(enriched_alerts), ttl
+        )
         return len(enriched_alerts)
 
     async def get_traffic_alerts(self) -> list[dict]:
@@ -139,7 +145,9 @@ class RedisLoader:
             return json.loads(cached)
         return []
 
-    async def set_prediction(self, sensor_id: str, prediction: dict, ttl: int = 600) -> None:
+    async def set_prediction(
+        self, sensor_id: str, prediction: dict, ttl: int = 600
+    ) -> None:
         """
         Cache une prédiction de trafic (TTL = 10 minutes).
 
@@ -195,7 +203,9 @@ class RedisLoader:
             return json.loads(cached)
         return []
 
-    async def set_fallback(self, source_name: str, data: list[dict], ttl: int = 3600) -> None:
+    async def set_fallback(
+        self, source_name: str, data: list[dict], ttl: int = 3600
+    ) -> None:
         """
         Sauvegarde les données d'une source pour un usage comme fallback.
 

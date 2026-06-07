@@ -25,13 +25,13 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import uvicorn
+from app.routers import crowdsourcing, environment, health, traffic
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
-from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
-
-from app.routers import crowdsourcing, environment, health, traffic
+from prometheus_client import (CONTENT_TYPE_LATEST, Counter, Histogram,
+                               generate_latest)
 
 # configuration du logging
 logging.basicConfig(
@@ -54,7 +54,8 @@ REQUEST_LATENCY = Histogram(
 )
 
 
-from app.db.session import db
+from app.db.session import db  # noqa: E402
+
 
 # lifespan : gestion du cycle de vie de l'application
 @asynccontextmanager
@@ -117,8 +118,8 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",       # Dev React
-        "https://urbanflow.fr",        # Prod
+        "http://localhost:3000",  # Dev React
+        "https://urbanflow.fr",  # Prod
         "https://www.urbanflow.fr",
     ],
     allow_credentials=True,
@@ -174,8 +175,12 @@ async def security_headers_middleware(request: Request, call_next) -> Response:
 # routeurs modulaires
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
 app.include_router(traffic.router, prefix="/api/v1/traffic", tags=["Trafic"])
-app.include_router(environment.router, prefix="/api/v1/environment", tags=["Environnement"])
-app.include_router(crowdsourcing.router, prefix="/api/v1/crowdsourcing", tags=["Crowdsourcing"])
+app.include_router(
+    environment.router, prefix="/api/v1/environment", tags=["Environnement"]
+)
+app.include_router(
+    crowdsourcing.router, prefix="/api/v1/crowdsourcing", tags=["Crowdsourcing"]
+)
 
 
 # endpoint métriques prometheus
@@ -223,8 +228,8 @@ if __name__ == "__main__":
         "app.main:app",
         host="0.0.0.0",
         port=8000,
-        reload=True,            # Dev uniquement
-        workers=1,              # En prod: workers = (2 × CPU_count) + 1
+        reload=True,  # Dev uniquement
+        workers=1,  # En prod: workers = (2 × CPU_count) + 1
         log_level="info",
         access_log=True,
     )

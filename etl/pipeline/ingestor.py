@@ -20,20 +20,19 @@ Auteur : UrbanFlow Team — M2 Big Data & IA 2025
 
 import asyncio
 import logging
-import os
 from datetime import datetime, timezone
 from typing import Any
 
 import httpx
 from codecarbon import EmissionsTracker
 
+from etl.pipeline.loaders.postgres_loader import PostgresLoader
+from etl.pipeline.loaders.redis_loader import RedisLoader
 from etl.pipeline.sources.data_gouv import DataGouvSource
 from etl.pipeline.sources.environment import EnvironmentSource
 from etl.pipeline.sources.idf_mobilites import IDFMobilitesSource
 from etl.pipeline.transformers.gdpr_anonymizer import GDPRAnonymizer
 from etl.pipeline.transformers.normalizer import DataNormalizer
-from etl.pipeline.loaders.postgres_loader import PostgresLoader
-from etl.pipeline.loaders.redis_loader import RedisLoader
 
 # configuration du logging
 logging.basicConfig(
@@ -132,7 +131,9 @@ class DataIngestor:
                 raw_data[name] = await self.redis_loader.get_fallback(name) or []
             else:
                 raw_data[name] = result
-                logger.info("✅ Source '%s' — %d enregistrements récupérés", name, len(result))
+                logger.info(
+                    "✅ Source '%s' — %d enregistrements récupérés", name, len(result)
+                )
 
         elapsed = (datetime.now(timezone.utc) - start_time).total_seconds()
         logger.info("📦 Ingestion parallèle terminée en %.2fs", elapsed)
@@ -152,10 +153,7 @@ class DataIngestor:
             list[dict]: Données normalisées prêtes pour PostgreSQL
         """
         normalized = self.normalizer.normalize_traffic(raw_data)
-        valid_records = [
-            r for r in normalized
-            if self._validate_traffic_record(r)
-        ]
+        valid_records = [r for r in normalized if self._validate_traffic_record(r)]
 
         if len(valid_records) < len(normalized):
             logger.warning(
@@ -184,7 +182,10 @@ class DataIngestor:
         Returns:
             list[dict]: Signalements anonymisés conformes RGPD
         """
-        logger.info("🔐 Application de l'anonymisation RGPD sur %d signalements...", len(raw_data))
+        logger.info(
+            "🔐 Application de l'anonymisation RGPD sur %d signalements...",
+            len(raw_data),
+        )
         anonymized = []
         for record in raw_data:
             anon_record = await self.anonymizer.anonymize(
@@ -217,8 +218,10 @@ class DataIngestor:
 
         # Bounding box Île-de-France
         IDF_BBOX = {
-            "lat_min": 48.12, "lat_max": 49.24,
-            "lon_min": 1.45,  "lon_max": 3.56,
+            "lat_min": 48.12,
+            "lat_max": 49.24,
+            "lon_min": 1.45,
+            "lon_max": 3.56,
         }
 
         if lat is None or lon is None:
@@ -265,10 +268,16 @@ class DataIngestor:
 
         # Chargement Redis (alertes temps réel, TTL = 5 minutes)
         if "traffic" in processed_data:
-            alerts = [r for r in processed_data["traffic"] if r.get("congestion_level", 0) >= 3]
+            alerts = [
+                r
+                for r in processed_data["traffic"]
+                if r.get("congestion_level", 0) >= 3
+            ]
             redis_count = await self.redis_loader.set_traffic_alerts(alerts, ttl=300)
             stats["redis"] += redis_count
-            logger.info("⚡ Redis: %d alertes trafic mises en cache (TTL=5min)", redis_count)
+            logger.info(
+                "⚡ Redis: %d alertes trafic mises en cache (TTL=5min)", redis_count
+            )
 
         return stats
 
@@ -288,10 +297,10 @@ class DataIngestor:
         pipeline_start = datetime.now(timezone.utc)
         logger.info("═══ Démarrage du pipeline ETL UrbanFlow ═══")
 
-# extraction
+        # extraction
         raw_data = await self.fetch_all_sources()
 
-# transformation
+        # transformation
         processed: dict[str, list[dict]] = {}
 
         if raw_data.get("data_gouv"):
@@ -309,10 +318,10 @@ class DataIngestor:
                 raw_data["idf_mobilites"]
             )
 
-# chargement
+        # chargement
         load_stats = await self.load_to_storage(processed)
 
-# rapport
+        # rapport
         elapsed = (datetime.now(timezone.utc) - pipeline_start).total_seconds()
         report = {
             "status": "success",

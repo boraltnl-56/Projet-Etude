@@ -80,7 +80,9 @@ class DataGouvSource:
             logger.error("❌ Data.gouv.fr: %s", str(e))
             # Fallback : données simulées pour démonstration
             results = self._generate_simulated_traffic()
-            logger.warning("⚠️  %d enregistrements simulés utilisés (fallback)", len(results))
+            logger.warning(
+                "⚠️  %d enregistrements simulés utilisés (fallback)", len(results)
+            )
 
         return results
 
@@ -120,17 +122,21 @@ class DataGouvSource:
             else:
                 congestion = 4
 
-            normalized.append({
-                "source": "data_gouv",
-                "sensor_id": record.get("iu_ac", "unknown"),
-                "road_name": record.get("libelle", "unknown"),
-                "latitude": geo.get("lat") if geo else None,
-                "longitude": geo.get("lon") if geo else None,
-                "vehicle_count": int(record.get("q", 0) or 0),
-                "average_speed_kmh": speed,
-                "congestion_level": congestion,
-                "timestamp": record.get("horodatage", datetime.now(timezone.utc).isoformat()),
-            })
+            normalized.append(
+                {
+                    "source": "data_gouv",
+                    "sensor_id": record.get("iu_ac", "unknown"),
+                    "road_name": record.get("libelle", "unknown"),
+                    "latitude": geo.get("lat") if geo else None,
+                    "longitude": geo.get("lon") if geo else None,
+                    "vehicle_count": int(record.get("q", 0) or 0),
+                    "average_speed_kmh": speed,
+                    "congestion_level": congestion,
+                    "timestamp": record.get(
+                        "horodatage", datetime.now(timezone.utc).isoformat()
+                    ),
+                }
+            )
         return normalized
 
     @staticmethod
@@ -143,7 +149,11 @@ class DataGouvSource:
         """
         # Axes principaux IDF avec coordonnées réelles
         axes = [
-            {"name": "Boulevard Périphérique - Porte de la Chapelle", "lat": 48.8972, "lon": 2.3588},
+            {
+                "name": "Boulevard Périphérique - Porte de la Chapelle",
+                "lat": 48.8972,
+                "lon": 2.3588,
+            },
             {"name": "A6 - Porte d'Orléans", "lat": 48.8169, "lon": 2.3248},
             {"name": "A1 - Porte de la Villette", "lat": 48.8971, "lon": 2.3730},
             {"name": "A13 - Porte de Saint-Cloud", "lat": 48.8335, "lon": 2.2497},
@@ -159,19 +169,29 @@ class DataGouvSource:
 
         results = []
         for axe in axes:
-            base_speed = random.uniform(20, 50) if is_rush_hour else random.uniform(60, 110)
+            base_speed = (
+                random.uniform(20, 50) if is_rush_hour else random.uniform(60, 110)
+            )
             speed = max(5.0, base_speed + random.normalvariate(0, 8))
-            congestion = 3 if speed <= 30 else (2 if speed <= 50 else (1 if speed <= 80 else 0))
+            congestion = (
+                3 if speed <= 30 else (2 if speed <= 50 else (1 if speed <= 80 else 0))
+            )
 
-            results.append({
-                "source": "data_gouv_simulated",
-                "sensor_id": f"SIM_{hash(axe['name']) % 9999:04d}",
-                "road_name": axe["name"],
-                "latitude": axe["lat"] + random.uniform(-0.001, 0.001),
-                "longitude": axe["lon"] + random.uniform(-0.001, 0.001),
-                "vehicle_count": random.randint(500, 3000) if is_rush_hour else random.randint(100, 800),
-                "average_speed_kmh": round(speed, 1),
-                "congestion_level": congestion,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
+            results.append(
+                {
+                    "source": "data_gouv_simulated",
+                    "sensor_id": f"SIM_{hash(axe['name']) % 9999:04d}",
+                    "road_name": axe["name"],
+                    "latitude": axe["lat"] + random.uniform(-0.001, 0.001),
+                    "longitude": axe["lon"] + random.uniform(-0.001, 0.001),
+                    "vehicle_count": (
+                        random.randint(500, 3000)
+                        if is_rush_hour
+                        else random.randint(100, 800)
+                    ),
+                    "average_speed_kmh": round(speed, 1),
+                    "congestion_level": congestion,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            )
         return results

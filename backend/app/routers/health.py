@@ -1,8 +1,11 @@
 """UrbanFlow — Health Check Router"""
+
 from datetime import datetime, timezone
+
 from fastapi import APIRouter
 
 router = APIRouter()
+
 
 @router.get("/health", summary="Health Check", tags=["Health"])
 async def health_check() -> dict:
@@ -15,7 +18,7 @@ async def health_check() -> dict:
         "components": {
             "api": "healthy",
             "database": "healthy",  # En prod: tester la connexion PostgreSQL
-            "redis": "healthy",     # En prod: redis.ping()
+            "redis": "healthy",  # En prod: redis.ping()
             "ml_model": "loaded",
         },
     }

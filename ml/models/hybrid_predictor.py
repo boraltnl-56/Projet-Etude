@@ -28,7 +28,6 @@ Auteur : UrbanFlow Team — M2 Big Data & IA 2025
 """
 
 import logging
-import os
 from pathlib import Path
 from typing import Optional
 
@@ -78,7 +77,8 @@ class ARIMAModel:
 
             logger.info(
                 "📈 Entraînement SARIMAX — ordre: %s, saisonnier: %s",
-                self.order, self.seasonal_order,
+                self.order,
+                self.seasonal_order,
             )
             model = SARIMAX(
                 time_series,
@@ -181,30 +181,32 @@ class LSTMModel:
     def _build_model(self):
         """Construit l'architecture LSTM avec Keras."""
         try:
-            import tensorflow as tf
+            import tensorflow as tf  # noqa: F401
             from tensorflow import keras
 
-            model = keras.Sequential([
-                keras.layers.LSTM(
-                    self.lstm_units[0],
-                    input_shape=(self.sequence_length, self.n_features),
-                    return_sequences=True,
-                    name="lstm_1",
-                ),
-                keras.layers.Dropout(self.dropout_rate, name="dropout_1"),
-                keras.layers.LSTM(
-                    self.lstm_units[1],
-                    return_sequences=False,
-                    name="lstm_2",
-                ),
-                keras.layers.Dropout(self.dropout_rate, name="dropout_2"),
-                keras.layers.Dense(32, activation="relu", name="dense_1"),
-                keras.layers.Dense(1, name="output"),
-            ])
+            model = keras.Sequential(
+                [
+                    keras.layers.LSTM(
+                        self.lstm_units[0],
+                        input_shape=(self.sequence_length, self.n_features),
+                        return_sequences=True,
+                        name="lstm_1",
+                    ),
+                    keras.layers.Dropout(self.dropout_rate, name="dropout_1"),
+                    keras.layers.LSTM(
+                        self.lstm_units[1],
+                        return_sequences=False,
+                        name="lstm_2",
+                    ),
+                    keras.layers.Dropout(self.dropout_rate, name="dropout_2"),
+                    keras.layers.Dense(32, activation="relu", name="dense_1"),
+                    keras.layers.Dense(1, name="output"),
+                ]
+            )
 
             model.compile(
                 optimizer=keras.optimizers.Adam(learning_rate=0.001),
-                loss="huber",           # Robuste aux outliers (accidents ponctuels)
+                loss="huber",  # Robuste aux outliers (accidents ponctuels)
                 metrics=["mae", "mse"],
             )
 
@@ -239,9 +241,8 @@ class LSTMModel:
         Returns:
             dict: Historique d'entraînement + métriques de performance + CO₂
         """
-        import tensorflow as tf
-        from tensorflow import keras
         from sklearn.preprocessing import StandardScaler
+        from tensorflow import keras
 
         # Normalisation des features
         self.scaler_ = StandardScaler()
@@ -276,11 +277,17 @@ class LSTMModel:
         ]
 
         validation_data = (
-            self.scaler_.transform(X_val.reshape(-1, self.n_features)).reshape(X_val.shape),
-            y_val,
-        ) if X_val is not None else None
+            (
+                self.scaler_.transform(X_val.reshape(-1, self.n_features)).reshape(
+                    X_val.shape
+                ),
+                y_val,
+            )
+            if X_val is not None
+            else None
+        )
 
-# entraînement avec codecarbon
+        # entraînement avec codecarbon
         tracker = EmissionsTracker(
             project_name="UrbanFlow-LSTM-Training",
             output_dir="./logs/carbon",
@@ -311,7 +318,9 @@ class LSTMModel:
 
         logger.info(
             "✅ LSTM entraîné en %d époques — Val MAE: %.4f — CO₂: %.6f kg CO₂eq",
-            actual_epochs, final_val_mae, emissions or 0.0,
+            actual_epochs,
+            final_val_mae,
+            emissions or 0.0,
         )
 
         return {
@@ -410,7 +419,9 @@ class HybridPredictor:
         """
         if not self.is_fitted:
             # Mode fallback : retourne des prédictions basées sur la moyenne récente
-            logger.warning("⚠️  Modèle non entraîné — utilisation du fallback (moyenne)")
+            logger.warning(
+                "⚠️  Modèle non entraîné — utilisation du fallback (moyenne)"
+            )
             mean_val = float(np.mean(recent_data[-12:]))
             predictions = np.full(horizon_steps, mean_val)
             return {
@@ -420,7 +431,7 @@ class HybridPredictor:
                 "lstm_weight": 0.0,
             }
 
-# pondération adaptative
+        # pondération adaptative
         effective_arima_w = self.arima_weight
         effective_lstm_w = self.lstm_weight
 
@@ -434,15 +445,15 @@ class HybridPredictor:
                 effective_arima_w = 0.5
                 effective_lstm_w = 0.5
 
-# prédictions arima
+        # prédictions arima
         arima_result = self.arima.predict_with_confidence(n_steps=horizon_steps)
         arima_preds = arima_result["predictions"]
 
-# prédictions lstm (simulation si non entraîné)
+        # prédictions lstm (simulation si non entraîné)
         # En production: X_lstm = prepare_lstm_features(recent_data)
         lstm_preds = arima_preds * np.random.uniform(0.9, 1.1, size=horizon_steps)
 
-# ensemble pondéré
+        # ensemble pondéré
         ensemble_preds = effective_arima_w * arima_preds + effective_lstm_w * lstm_preds
 
         result = {
@@ -476,7 +487,8 @@ class HybridPredictor:
         Returns:
             dict: Métriques de performance
         """
-        from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+        from sklearn.metrics import (mean_absolute_error, mean_squared_error,
+                                     r2_score)
 
         mae = mean_absolute_error(y_true, y_pred)
         rmse = np.sqrt(mean_squared_error(y_true, y_pred))
@@ -492,13 +504,14 @@ class HybridPredictor:
 
         logger.info(
             "📊 Métriques hybride — MAE: %.2f km/h | RMSE: %.2f | MAPE: %.1f%% | R²: %.3f",
-            mae, rmse, mape, r2,
+            mae,
+            rmse,
+            mape,
+            r2,
         )
 
         # Vérification des seuils (objectifs projet)
         if mape > 8.0:
-            logger.warning(
-                "⚠️  MAPE %.1f%% > 8%% — Retraining recommandé", mape
-            )
+            logger.warning("⚠️  MAPE %.1f%% > 8%% — Retraining recommandé", mape)
 
         return metrics
