@@ -480,8 +480,7 @@ def evaluate_and_save(
     Returns:
         dict: Rapport complet de performance
     """
-    from sklearn.metrics import (mean_absolute_error, mean_squared_error,
-                                 r2_score)
+    from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
     results = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
