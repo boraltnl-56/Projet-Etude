@@ -47,6 +47,38 @@ CREATE TABLE traffic_measurements_2026_01
     PARTITION OF traffic_measurements
     FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
 
+CREATE TABLE traffic_measurements_2026_02
+    PARTITION OF traffic_measurements
+    FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+
+CREATE TABLE traffic_measurements_2026_03
+    PARTITION OF traffic_measurements
+    FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+
+CREATE TABLE traffic_measurements_2026_04
+    PARTITION OF traffic_measurements
+    FOR VALUES FROM ('2026-04-01') TO ('2026-05-01');
+
+CREATE TABLE traffic_measurements_2026_05
+    PARTITION OF traffic_measurements
+    FOR VALUES FROM ('2026-05-01') TO ('2026-06-01');
+
+CREATE TABLE traffic_measurements_2026_06
+    PARTITION OF traffic_measurements
+    FOR VALUES FROM ('2026-06-01') TO ('2026-07-01');
+
+CREATE TABLE traffic_measurements_2026_07
+    PARTITION OF traffic_measurements
+    FOR VALUES FROM ('2026-07-01') TO ('2026-08-01');
+
+CREATE TABLE traffic_measurements_2026_08
+    PARTITION OF traffic_measurements
+    FOR VALUES FROM ('2026-08-01') TO ('2026-09-01');
+
+CREATE TABLE traffic_measurements_2026_12
+    PARTITION OF traffic_measurements
+    FOR VALUES FROM ('2026-09-01') TO ('2027-01-01');
+
 -- ─── Index pour les performances ───────────────────────────────────────────
 
 -- Index spatial GiST (requêtes ST_DWithin, ST_Intersects)
@@ -104,28 +136,31 @@ CREATE INDEX IF NOT EXISTS idx_env_timestamp
     ON environment_readings (timestamp DESC);
 
 -- ─── Table : signalements citoyens (anonymisés RGPD) ───────────────────────
-CREATE TABLE IF NOT EXISTS crowdsourcing_reports (
+-- Nom de table aligné avec le router crowdsourcing.py (crowdsourced_reports)
+CREATE TABLE IF NOT EXISTS crowdsourced_reports (
     id              BIGSERIAL PRIMARY KEY,
     -- Identifiant éphémère (UUID, expire dans 30 jours)
     ephemeral_id    UUID         NOT NULL UNIQUE,
+    -- Hash SHA-256 de l'IP (pseudonymisation RGPD — jamais l'IP en clair)
+    user_hash       VARCHAR(64),
     -- Coordonnées floutées (±150m — conformité RGPD)
-    geom_approx     GEOMETRY(POINT, 4326),
+    geom            GEOMETRY(POINT, 4326),
     report_type     VARCHAR(50)  NOT NULL,
     severity        SMALLINT     NOT NULL CHECK (severity BETWEEN 1 AND 5),
     -- Aucun champ PII : ip_address, user_id, email ne sont JAMAIS stockés
     timestamp       TIMESTAMPTZ  NOT NULL,
     -- Suppression automatique après 30 jours (Art. 17 RGPD — Droit à l'effacement)
-    expires_at      TIMESTAMPTZ  NOT NULL GENERATED ALWAYS AS (timestamp + INTERVAL '30 days') STORED,
+    expires_at      TIMESTAMPTZ  NOT NULL,
     created_at      TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
 -- Index pour les requêtes spatiales (affichage carte)
 CREATE INDEX IF NOT EXISTS idx_crowd_geom
-    ON crowdsourcing_reports USING GIST (geom_approx);
+    ON crowdsourced_reports USING GIST (geom);
 
 -- Index pour la politique de rétention RGPD
 CREATE INDEX IF NOT EXISTS idx_crowd_expires
-    ON crowdsourcing_reports (expires_at);
+    ON crowdsourced_reports (expires_at);
 
 -- ─── Table : prédictions IA ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS traffic_predictions (

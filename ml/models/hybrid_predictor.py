@@ -354,7 +354,7 @@ class HybridPredictor:
     Prédicteur hybride ARIMA + LSTM avec pondération dynamique.
 
     Stratégie d'ensemble :
-        - En régime stable (faible volatilité) : ARIMA poids 0.6, LSTM 0.4
+        - En régime stable (faible volatilité) : ARIMA poids 0.5, LSTM 0.5
         - En régime perturbé (forte volatilité) : ARIMA 0.3, LSTM 0.7
         - Volatilité mesurée par l'écart-type glissant (fenêtre 6h)
 

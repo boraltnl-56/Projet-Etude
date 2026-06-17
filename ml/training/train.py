@@ -45,9 +45,7 @@ for d in [OUTPUT_DIR, EVAL_DIR / "plots", LOG_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # 1. GÉNÉRATION DES DONNÉES SYNTHÉTIQUES IDF
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def generate_synthetic_traffic_data(
@@ -161,9 +159,7 @@ def generate_synthetic_traffic_data(
     return df
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # 2. PRÉPARATION DES FEATURES
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def prepare_features(df: pd.DataFrame) -> pd.DataFrame:
@@ -235,9 +231,7 @@ def create_lstm_sequences(
     return np.array(X), np.array(y)
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # 3. ENTRAÎNEMENT ARIMA
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def train_arima(train_series: pd.Series) -> dict:
@@ -301,9 +295,7 @@ def train_arima(train_series: pd.Series) -> dict:
         return {"model": None, "aic": None, "bic": None, "mae_train": None}
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # 4. ENTRAÎNEMENT LSTM
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def train_lstm(
@@ -456,9 +448,7 @@ def train_lstm(
         }
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # 5. ÉVALUATION & RAPPORT
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def evaluate_and_save(
@@ -540,9 +530,7 @@ def evaluate_and_save(
     return results
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # 6. PIPELINE PRINCIPAL
-# ═══════════════════════════════════════════════════════════════════════════════
 
 
 def main() -> None:

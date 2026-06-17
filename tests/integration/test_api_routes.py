@@ -1,26 +1,4 @@
-"""
-UrbanFlow — Tests d'Intégration : Routes API FastAPI
-====================================================
-Tests d'intégration des endpoints API avec le client de test httpx.
 
-Stratégie :
-    - TestClient FastAPI (synchrone pour simplicité)
-    - AsyncClient pour les endpoints async
-    - Vérification des codes HTTP, schémas JSON, headers RGPD
-    - Tests de validation Pydantic (inputs invalides)
-
-Couverture :
-    - GET /api/v1/health
-    - GET /api/v1/traffic/current
-    - POST /api/v1/traffic/predict
-    - GET /api/v1/traffic/heatmap
-    - POST /api/v1/crowdsourcing/report (conformité RGPD)
-    - GET /api/v1/environment/current
-
-Exécution : pytest tests/integration/test_api_routes.py -v
-
-Auteur : UrbanFlow Team — M2 Big Data & IA 2025
-"""
 
 import json
 import sys
@@ -42,9 +20,7 @@ def client() -> TestClient:
         yield c
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TESTS — Health Check
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestHealthCheck:
     """Tests du endpoint de health check."""
@@ -69,9 +45,7 @@ class TestHealthCheck:
         assert "application/json" in response.headers["content-type"]
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TESTS — Routes Trafic
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestTrafficRoutes:
     """Tests des endpoints de trafic routier."""
@@ -176,9 +150,7 @@ class TestTrafficRoutes:
             assert alert["congestion_level"] >= 3
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TESTS — Crowdsourcing (RGPD)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestCrowdsourcingRoutes:
     """Tests des endpoints crowdsourcing avec vérification RGPD."""
@@ -258,9 +230,7 @@ class TestCrowdsourcingRoutes:
                 assert pii not in report, f"PII '{pii}' trouvé dans la réponse API !"
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TESTS — Sécurité & Headers
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestSecurityHeaders:
     """Tests des headers de sécurité HTTP."""
@@ -286,9 +256,7 @@ class TestSecurityHeaders:
         assert "error" in data or "detail" in data
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TESTS — Environnement
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestEnvironmentRoutes:
     """Tests des endpoints de données environnementales."""

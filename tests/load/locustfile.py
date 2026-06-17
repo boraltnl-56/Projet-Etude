@@ -37,9 +37,7 @@ import random
 from locust import HttpUser, between, events, tag, task
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # UTILISATEURS SIMULÉS
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class UrbanFlowAPIUser(HttpUser):
     """
@@ -239,9 +237,7 @@ class UrbanFlowDashboardUser(HttpUser):
         self.client.get("/api/v1/traffic/heatmap", name="Dashboard: heatmap refresh")
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # LISTENERS & RAPPORTS
-# ═══════════════════════════════════════════════════════════════════════════════
 
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs) -> None:

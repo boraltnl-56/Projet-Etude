@@ -36,9 +36,7 @@ from etl.pipeline.transformers.normalizer import DataNormalizer
 from etl.pipeline.sources.data_gouv import DataGouvSource
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # FIXTURES
-# ═══════════════════════════════════════════════════════════════════════════════
 
 @pytest.fixture
 def normalizer() -> DataNormalizer:
@@ -84,9 +82,7 @@ def sample_crowdsourcing_record() -> dict:
     }
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TESTS — Normalisateur de données
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestDataNormalizer:
     """Tests du module de normalisation des données multi-sources."""
@@ -187,9 +183,7 @@ class TestDataNormalizer:
         assert result[0]["pm25"] == 35.5
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TESTS — Anonymisation RGPD
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestGDPRAnonymizer:
     """
@@ -317,9 +311,7 @@ class TestGDPRAnonymizer:
         assert len(result) <= 500
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TESTS — Validation géographique
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestGeographicValidation:
     """Tests de validation des données géographiques."""
@@ -369,9 +361,7 @@ class TestGeographicValidation:
         assert result == expected
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
 # TESTS — Sources de données (avec mock HTTP)
-# ═══════════════════════════════════════════════════════════════════════════════
 
 class TestDataGouvSource:
     """Tests de la source Data.gouv.fr avec mocks HTTP."""

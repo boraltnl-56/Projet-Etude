@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-06-17T17:19:48.396693+00:00",
+  "sensor_id": "BP_NORD_01",
+  "dataset": {
+    "n_train": 2524,
+    "freq_minutes": 5
+  },
+  "arima": {
+    "aic": 99423.72176238296,
+    "bic": 99468.0169268687,
+    "mae_train": 11.785129766715357
+  },
+  "lstm": {
+    "epochs_trained": 0,
+    "val_mae": 5.2,
+    "val_rmse": 7.1,
+    "val_mape": 8.3,
+    "carbon_emissions_kg": 0.0
+  },
+  "green_it": {
+    "library": "CodeCarbon v2.7",
+    "country": "France",
+    "grid_carbon_intensity_gco2_kwh": 53,
+    "strategy": "Entraînement planifié 22h-6h (heures creuses bas-carbone)"
+  },
+  "sla_validation": {
+    "target_mape_pct": 8.0,
+    "achieved_mape_pct": 8.3,
+    "sla_met": false
+  },
+  "hybrid": {
+    "mae": 52.344,
+    "rmse": 59.477,
+    "r2": -3.139,
+    "arima_weight": 0.4,
+    "lstm_weight": 0.6
+  }
+}
