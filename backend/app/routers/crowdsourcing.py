@@ -21,7 +21,7 @@ import os
 import random
 import uuid
 from datetime import datetime, timedelta, timezone
-from typing import Annotated
+from typing import Annotated, Literal
 
 import asyncpg
 from fastapi import APIRouter, Depends, Query, Request
@@ -34,8 +34,6 @@ router = APIRouter()
 
 GDPR_HASH_SALT = os.environ.get("GDPR_HASH_SALT", "urbanflow-salt-change-in-prod")
 
-
-from typing import Literal
 
 class ReportSubmission(BaseModel):
     report_type: Literal["accident", "embouteillage", "travaux", "danger"] = Field(
