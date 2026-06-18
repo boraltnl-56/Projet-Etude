@@ -89,6 +89,7 @@ async def get_aqi_history(
         ORDER BY DATE(timestamp) ASC
     """
     from datetime import timedelta
+
     interval_td = timedelta(days=days)
     records = await db.fetch(query, interval_td)
 
