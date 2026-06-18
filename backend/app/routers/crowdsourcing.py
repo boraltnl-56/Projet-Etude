@@ -77,7 +77,7 @@ def apply_geo_blur(
     return round(lat_blur, 5), round(lon_blur, 5)
 
 
-@router.post("/report", response_model=ReportResponse)
+@router.post("/report", response_model=ReportResponse, status_code=201)
 async def submit_report(
     report: ReportSubmission,
     request: Request,
