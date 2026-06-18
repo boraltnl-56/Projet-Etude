@@ -23,7 +23,9 @@ logger = logging.getLogger("urbanflow.etl.sources.idf_mobilites")
 
 # Configuration API Île-de-France Mobilités
 IDF_API_BASE = "https://prim.iledefrance-mobilites.fr/marketplace"
-IDF_API_KEY = os.environ.get("IDF_API_KEY", "")  # Configurer dans .env → IDF_API_KEY=xxx
+IDF_API_KEY = os.environ.get(
+    "IDF_API_KEY", ""
+)  # Configurer dans .env → IDF_API_KEY=xxx
 
 
 class IDFMobilitesSource:

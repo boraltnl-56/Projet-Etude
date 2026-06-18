@@ -136,7 +136,10 @@ async def predict_traffic(
     else:
         predicted_speed = _hour_profile_speed(target_hour)
         model_used = "setra_hourly_profile"
-        logger.info("Pas d'historique pour le capteur %s — profil horaire utilisé", request.sensor_id)
+        logger.info(
+            "Pas d'historique pour le capteur %s — profil horaire utilisé",
+            request.sensor_id,
+        )
 
     predicted_congestion = _speed_to_congestion(predicted_speed)
     margin = predicted_speed * 0.12
@@ -146,8 +149,12 @@ async def predict_traffic(
         predicted_congestion_level=predicted_congestion,
         predicted_speed_kmh=round(predicted_speed, 1),
         prediction_horizon_minutes=request.horizon_minutes,
-        confidence_lower=round(predicted_speed - margin, 1) if request.include_confidence else None,
-        confidence_upper=round(predicted_speed + margin, 1) if request.include_confidence else None,
+        confidence_lower=(
+            round(predicted_speed - margin, 1) if request.include_confidence else None
+        ),
+        confidence_upper=(
+            round(predicted_speed + margin, 1) if request.include_confidence else None
+        ),
         model_used=model_used,
         computed_at=now,
         cached=False,
