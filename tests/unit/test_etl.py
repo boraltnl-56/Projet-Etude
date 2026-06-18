@@ -371,11 +371,10 @@ class TestDataGouvSource:
         """En cas d'erreur HTTP, le fallback simulé doit être retourné."""
         source = DataGouvSource()
 
-        # Mock du client HTTP qui retourne une erreur 503
+        import httpx
+        # Mock du client HTTP qui lève une erreur de connexion
         mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.raise_for_status.side_effect = Exception("Service unavailable")
-        mock_client.get.return_value = mock_response
+        mock_client.get.side_effect = httpx.ConnectError("Service unavailable")
 
         result = await source.fetch(mock_client)
 
