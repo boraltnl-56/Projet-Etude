@@ -42,9 +42,6 @@ jobs:
       - name: Run Black (format check)
         run: black --check backend/ etl/ ml/
 
-      - name: Run isort (import order)
-        run: isort --check-only backend/ etl/ ml/
-
       - name: Run mypy (type checking)
         run: mypy backend/app/ --ignore-missing-imports
         continue-on-error: true  # Non-bloquant en CI

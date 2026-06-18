@@ -25,12 +25,13 @@ from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 import uvicorn
-from app.routers import crowdsourcing, environment, health, traffic
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
+
+from app.routers import crowdsourcing, environment, health, traffic
 
 # configuration du logging
 logging.basicConfig(

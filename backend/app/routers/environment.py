@@ -15,9 +15,10 @@ from datetime import datetime
 from typing import Annotated
 
 import asyncpg
-from app.db.session import get_pg_conn
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
+
+from app.db.session import get_pg_conn
 
 logger = logging.getLogger("urbanflow.api.environment")
 router = APIRouter()

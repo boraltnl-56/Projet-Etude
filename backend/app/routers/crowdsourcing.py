@@ -24,9 +24,10 @@ from datetime import datetime, timedelta, timezone
 from typing import Annotated
 
 import asyncpg
-from app.db.session import get_pg_conn
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
+
+from app.db.session import get_pg_conn
 
 logger = logging.getLogger("urbanflow.api.crowdsourcing")
 router = APIRouter()
