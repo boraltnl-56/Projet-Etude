@@ -11,7 +11,7 @@ from typing import Annotated
 
 import asyncpg
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.db.session import get_pg_conn
 
@@ -33,7 +33,7 @@ class TrafficMeasurement(BaseModel):
 
 class PredictionRequest(BaseModel):
     sensor_id: str
-    horizon_minutes: int = 60
+    horizon_minutes: int = Field(60, le=240)
     include_confidence: bool = True
 
 

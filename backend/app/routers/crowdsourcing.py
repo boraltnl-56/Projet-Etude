@@ -35,13 +35,15 @@ router = APIRouter()
 GDPR_HASH_SALT = os.environ.get("GDPR_HASH_SALT", "urbanflow-salt-change-in-prod")
 
 
+from typing import Literal
+
 class ReportSubmission(BaseModel):
-    report_type: str = Field(
+    report_type: Literal["accident", "embouteillage", "travaux", "danger"] = Field(
         ..., description="Type: accident, embouteillage, travaux, danger"
     )
-    severity: int = Field(..., ge=1, le=4)
-    latitude: float
-    longitude: float
+    severity: int = Field(..., ge=1, le=5)
+    latitude: float = Field(..., ge=48.12, le=49.24)
+    longitude: float = Field(..., ge=1.45, le=3.56)
 
 
 class ReportResponse(BaseModel):
